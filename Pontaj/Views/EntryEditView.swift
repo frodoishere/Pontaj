@@ -54,7 +54,7 @@ struct EntryEditView: View {
                         Spacer()
                         Text(isValidInterval ? Formatters.duration(end.timeIntervalSince(start))
                                              : "Stop trebuie dupa Start")
-                            .foregroundStyle(isValidInterval ? .secondary : .red)
+                            .foregroundStyle(isValidInterval ? Color.secondary : Color.red)
                     }
                     .font(.subheadline)
                 }
