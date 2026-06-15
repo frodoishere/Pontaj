@@ -11,8 +11,11 @@ fara server si fara cont.
 - Data si ora preluate automat de la telefon (`Date()`), in formatul local.
 - Cronometru live cat timp pontajul este pornit (HH:MM:SS).
 - Mai multe proiecte: le adaugi/stergi din ecranul **Proiecte** (iconita folder).
-- **Descriere "ce am facut"**: cand apesi Stop, poti scrie ce ai lucrat. O poti
-  edita oricand apasand pe un pontaj din lista (sau stergi pontajul tinand apasat).
+- **Descriere "ce am facut"**: cand apesi Stop, poti scrie ce ai lucrat.
+- **Editare / adaugare manuala**: apesi pe un pontaj din lista ca sa-i modifici
+  proiectul, ora de start/stop si descrierea (sau sa-l stergi). Cu butonul "+"
+  poti adauga manual un pontaj pe trecut (cand ai uitat sa pornesti cronometrul).
+- **Grupare pe zile**: pontajele sunt grupate pe zi, cu subtotal pe fiecare zi.
 - **Filtrare**: poti filtra pontajele dupa proiect si dupa perioada (Toate, Azi,
   Saptamana, Luna sau un interval de date ales). Totalul afisat se actualizeaza
   dupa filtru.
@@ -49,7 +52,7 @@ Pontaj/
    ├─ Views/
    │  ├─ ProjectsView.swift   # adaugare/stergere proiecte
    │  ├─ EntryRow.swift       # randul unui pontaj din lista
-   │  ├─ EntryNoteView.swift  # editare descriere "ce am facut"
+   │  ├─ EntryEditView.swift  # editare / adaugare manuala pontaj (start, stop, nota)
    │  ├─ FilterBar.swift      # filtrare dupa proiect si perioada
    │  ├─ SummaryView.swift    # rezumat normal/suplimentar + per proiect
    │  └─ ShareSheet.swift     # partajare fisier CSV exportat

@@ -140,6 +140,26 @@ final class PontajStore: ObservableObject {
         saveEntries()
     }
 
+    /// Inlocuieste un pontaj existent (folosit la editare manuala).
+    func updateEntry(_ entry: TimeEntry) {
+        guard let idx = entries.firstIndex(where: { $0.id == entry.id }) else { return }
+        entries[idx] = entry
+        saveEntries()
+    }
+
+    /// Adauga manual un pontaj (ex: ai uitat sa pornesti cronometrul).
+    func addEntry(projectId: UUID, projectName: String, start: Date, end: Date, note: String) {
+        let entry = TimeEntry(
+            projectId: projectId,
+            projectName: projectName,
+            start: start,
+            end: end,
+            note: note.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        entries.append(entry)
+        saveEntries()
+    }
+
     // MARK: - Export CSV
 
     /// Construieste continutul CSV pentru pontajele date: lista de pontaje +

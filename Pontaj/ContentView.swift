@@ -6,6 +6,7 @@ struct ContentView: View {
     @State private var selectedProjectId: UUID?
     @State private var showProjects = false
     @State private var editingEntry: TimeEntry?
+    @State private var showAddEntry = false
     @State private var shareItem: ShareItem?
     @State private var filter = EntryFilter()
 
@@ -45,7 +46,11 @@ struct ContentView: View {
                     .environmentObject(store)
             }
             .sheet(item: $editingEntry) { entry in
-                EntryNoteView(entry: entry)
+                EntryEditView(mode: .edit(entry))
+                    .environmentObject(store)
+            }
+            .sheet(isPresented: $showAddEntry) {
+                EntryEditView(mode: .create)
                     .environmentObject(store)
             }
             .sheet(item: $shareItem) { item in
@@ -180,6 +185,14 @@ struct ContentView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+                if !store.projects.isEmpty {
+                    Button {
+                        showAddEntry = true
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                    }
+                }
             }
 
             if !store.entries.isEmpty {
@@ -204,26 +217,44 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 8)
             } else {
-                VStack(spacing: 10) {
-                    ForEach(filteredEntries) { entry in
-                        Button {
-                            editingEntry = entry
-                        } label: {
-                            EntryRow(entry: entry)
-                        }
-                        .buttonStyle(.plain)
-                        .contextMenu {
-                            Button {
-                                editingEntry = entry
-                            } label: {
-                                Label("Editeaza descrierea", systemImage: "square.and.pencil")
-                            }
-                            Button(role: .destructive) {
-                                store.deleteEntry(entry)
-                            } label: {
-                                Label("Sterge", systemImage: "trash")
-                            }
-                        }
+                ForEach(groupedEntries, id: \.day) { group in
+                    dayGroup(group)
+                }
+            }
+        }
+    }
+
+    /// Un grup de pontaje dintr-o zi, cu antet (data + subtotal).
+    private func dayGroup(_ group: (day: Date, entries: [TimeEntry])) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(Formatters.dayHeader.string(from: group.day))
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(Formatters.durationShort(group.entries.reduce(0) { $0 + $1.duration }))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.top, 4)
+
+            ForEach(group.entries) { entry in
+                Button {
+                    editingEntry = entry
+                } label: {
+                    EntryRow(entry: entry)
+                }
+                .buttonStyle(.plain)
+                .contextMenu {
+                    Button {
+                        editingEntry = entry
+                    } label: {
+                        Label("Editeaza", systemImage: "square.and.pencil")
+                    }
+                    Button(role: .destructive) {
+                        store.deleteEntry(entry)
+                    } label: {
+                        Label("Sterge", systemImage: "trash")
                     }
                 }
             }
@@ -234,6 +265,15 @@ struct ContentView: View {
 
     private var filteredEntries: [TimeEntry] {
         store.sortedEntries.filter { filter.matches($0) }
+    }
+
+    /// Pontajele filtrate, grupate pe zi (dupa ora de start), zilele recente primele.
+    private var groupedEntries: [(day: Date, entries: [TimeEntry])] {
+        let cal = Calendar.current
+        let groups = Dictionary(grouping: filteredEntries) { cal.startOfDay(for: $0.start) }
+        return groups
+            .map { (day: $0.key, entries: $0.value.sorted { $0.start > $1.start }) }
+            .sorted { $0.day > $1.day }
     }
 
     /// Rezumatul perioadei, decupat la intervalul filtrului.
