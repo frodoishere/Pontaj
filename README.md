@@ -7,10 +7,15 @@ fara server si fara cont.
 
 ## Functii
 
-- Buton mare **Start** / **Stop**.
-- Data si ora preluate automat de la telefon (`Date()`), in formatul local.
-- Cronometru live cat timp pontajul este pornit (HH:MM:SS).
-- Mai multe proiecte: le adaugi/stergi din ecranul **Proiecte** (iconita folder).
+- Buton **Start** / **Pauză** / **Reluare** / **Stop**. Pauza nu se contorizează în durata pontajului.
+- **Tarif pe oră** per proiect (opțional) → total **facturabil** în rezumat și CSV.
+- **Editare proiect**: apasă pe un proiect din listă pentru nume și tarif.
+- **Tag-uri rapide** la descriere: Birou, Teren, Deplasare, etc.
+- **Swipe stânga → Șterge** pe pontaje (sau ține apăsat pentru meniu).
+- **Backup / Restore** JSON din ecranul Proiecte.
+- **Notificare** dacă pontajul rămâne pornit peste 12 ore.
+- **Feedback haptic** la Start / Stop / Pauză.
+- Sesiunea activă (inclusiv pauza) se salvează: poți închide aplicația și continua la redeschidere.
 - **Descriere "ce am facut"**: cand apesi Stop, poti scrie ce ai lucrat.
 - **Editare / adaugare manuala**: apesi pe un pontaj din lista ca sa-i modifici
   proiectul, ora de start/stop si descrierea (sau sa-l stergi). Cu butonul "+"
@@ -52,12 +57,16 @@ Pontaj/
    ├─ Views/
    │  ├─ ProjectsView.swift   # adaugare/stergere proiecte
    │  ├─ EntryRow.swift       # randul unui pontaj din lista
-   │  ├─ EntryEditView.swift  # editare / adaugare manuala pontaj (start, stop, nota)
+   │  ├─ EntryEditView.swift  # editare / adaugare manuala pontaj
+   │  ├─ ProjectEditView.swift # editare proiect (nume, tarif)
    │  ├─ FilterBar.swift      # filtrare dupa proiect si perioada
-   │  ├─ SummaryView.swift    # rezumat normal/suplimentar + per proiect
-   │  └─ ShareSheet.swift     # partajare fisier CSV exportat
+   │  ├─ SummaryView.swift    # rezumat normal/suplimentar + facturabil
+   │  ├─ TimerCard.swift      # cronometru izolat (performanta)
+   │  └─ ShareSheet.swift     # partajare fisiere exportate
    ├─ Utils/
-   │  └─ Formatters.swift     # formatare data/ora/durata
+   │  ├─ Formatters.swift     # formatare data/ora/durata/bani
+   │  ├─ Haptics.swift        # feedback la butoane
+   │  └─ NotificationManager.swift # memento pontaj uitat
    └─ Assets.xcassets/        # iconita si culoare accent
 ```
 
@@ -66,11 +75,12 @@ Pontaj/
 > O aplicatie iOS nativa se poate construi doar pe un Mac cu Xcode. Codul de aici
 > este complet; trebuie doar deschis pe un Mac.
 
-1. Copiaza folderul `Pontaj` pe un Mac.
-2. Instaleaza **Xcode 16** sau mai nou (din App Store).
-3. Deschide `Pontaj/Pontaj.xcodeproj` (dublu-click).
-4. In Xcode, selecteaza un simulator de iPhone sus (ex: *iPhone 15*) si apasa
-   butonul **Run** (▶) sau `Cmd + R`. Aplicatia porneste in simulator.
+1. Clonează repo-ul pe Mac: `git clone https://github.com/frodoishere/Pontaj.git`
+2. Instalează **Xcode 16** sau mai nou (din App Store).
+3. Deschide `Pontaj/Pontaj.xcodeproj`.
+4. Selectează un simulator de iPhone și apasă **Run** (▶).
+
+Pentru actualizări ulterioare: `git pull` în folderul proiectului.
 
 ### Ca sa o pui pe iPhone-ul tau real
 

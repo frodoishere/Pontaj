@@ -12,15 +12,80 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    TimerCard(active: store.active)
-                    controls
-                    entriesSection
+            List {
+                Section {
+                    VStack(spacing: 24) {
+                        TimerCard(active: store.active)
+                        controls
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                 }
-                .padding()
+
+                if !store.entries.isEmpty {
+                    Section {
+                        FilterBar(filter: $filter)
+                    }
+                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                    .listRowBackground(Color.clear)
+                }
+
+                if !filteredEntries.isEmpty {
+                    Section {
+                        SummaryView(
+                            summary: periodSummary,
+                            normalDaily: store.normalDailyDuration,
+                            billingTotal: store.billingTotal(for: filteredEntries)
+                        )
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                }
+
+                if store.sortedEntries.isEmpty {
+                    Section {
+                        Text("Încă nu ai niciun pontaj. Alege un proiect și apasă Start.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                } else if filteredEntries.isEmpty {
+                    Section {
+                        Text("Niciun pontaj pentru filtrul selectat.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    ForEach(groupedEntries, id: \.day) { group in
+                        Section {
+                            ForEach(group.entries) { entry in
+                                Button { editingEntry = entry } label: {
+                                    EntryRow(entry: entry)
+                                }
+                                .buttonStyle(.plain)
+                                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                                .listRowBackground(Color.clear)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        Haptics.warning()
+                                        store.deleteEntry(entry)
+                                    } label: {
+                                        Label("Șterge", systemImage: "trash")
+                                    }
+                                }
+                            }
+                        } header: {
+                            HStack {
+                                Text(Formatters.dayHeader.string(from: group.day))
+                                Spacer()
+                                Text(Formatters.durationShort(group.entries.reduce(0) { $0 + $1.duration }))
+                            }
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                }
             }
-            .background(Color(.systemGroupedBackground))
+            .listStyle(.insetGrouped)
             .navigationTitle("Pontaj")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -34,24 +99,26 @@ struct ContentView: View {
                     .disabled(filteredEntries.isEmpty)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showProjects = true
-                    } label: {
-                        Label("Proiecte", systemImage: "folder")
+                    HStack(spacing: 16) {
+                        if !store.projects.isEmpty {
+                            Button { showAddEntry = true } label: {
+                                Image(systemName: "plus.circle")
+                            }
+                        }
+                        Button { showProjects = true } label: {
+                            Label("Proiecte", systemImage: "folder")
+                        }
                     }
                 }
             }
             .sheet(isPresented: $showProjects) {
-                ProjectsView()
-                    .environmentObject(store)
+                ProjectsView().environmentObject(store)
             }
             .sheet(item: $editingEntry) { entry in
-                EntryEditView(mode: .edit(entry))
-                    .environmentObject(store)
+                EntryEditView(mode: .edit(entry)).environmentObject(store)
             }
             .sheet(isPresented: $showAddEntry) {
-                EntryEditView(mode: .create)
-                    .environmentObject(store)
+                EntryEditView(mode: .create).environmentObject(store)
             }
             .sheet(item: $shareItem) { item in
                 ShareSheet(items: [item.url])
@@ -65,12 +132,15 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Selectie proiect + buton Start/Stop
+    // MARK: - Controale
 
     private var controls: some View {
         VStack(spacing: 16) {
             if store.isRunning {
-                stopButton
+                HStack(spacing: 12) {
+                    if store.active?.isPaused == true { resumeButton } else { pauseButton }
+                    stopButton
+                }
             } else if store.projects.isEmpty {
                 emptyProjectsPrompt
             } else {
@@ -82,15 +152,12 @@ struct ContentView: View {
 
     private var emptyProjectsPrompt: some View {
         VStack(spacing: 12) {
-            Text("Adauga un proiect ca sa poti porni pontajul.")
+            Text("Adaugă un proiect ca să poți porni pontajul.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
-            Button {
-                showProjects = true
-            } label: {
-                Label("Adauga primul proiect", systemImage: "plus")
+            Button { showProjects = true } label: {
+                Label("Adaugă primul proiect", systemImage: "plus")
                     .font(.title2.bold())
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
@@ -101,51 +168,36 @@ struct ContentView: View {
 
     private var projectPicker: some View {
         Menu {
-            if store.projects.isEmpty {
-                Text("Niciun proiect")
-            } else {
-                ForEach(store.projects) { project in
-                    Button {
-                        selectedProjectId = project.id
-                    } label: {
-                        if project.id == selectedProjectId {
-                            Label(project.name, systemImage: "checkmark")
-                        } else {
-                            Text(project.name)
-                        }
+            ForEach(store.projects) { project in
+                Button { selectedProjectId = project.id } label: {
+                    if project.id == selectedProjectId {
+                        Label(project.name, systemImage: "checkmark")
+                    } else {
+                        Text(project.name)
                     }
                 }
             }
             Divider()
-            Button {
-                showProjects = true
-            } label: {
-                Label("Adauga / gestioneaza proiecte", systemImage: "plus")
+            Button { showProjects = true } label: {
+                Label("Adaugă / gestionează proiecte", systemImage: "plus")
             }
         } label: {
             HStack {
                 Image(systemName: "folder")
-                Text(selectedProjectName ?? "Alege un proiect")
-                    .fontWeight(.medium)
+                Text(selectedProjectName ?? "Alege un proiect").fontWeight(.medium)
                 Spacer()
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                Image(systemName: "chevron.up.chevron.down").font(.footnote).foregroundStyle(.secondary)
             }
             .padding()
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
-            )
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(.secondarySystemGroupedBackground)))
         }
     }
 
     private var startButton: some View {
         Button {
-            // Daca nimic nu e selectat dar exista proiecte, foloseste primul.
             guard let project = selectedProject ?? store.projects.first else { return }
             selectedProjectId = project.id
+            Haptics.medium()
             withAnimation { store.start(project: project) }
         } label: {
             Label("Start", systemImage: "play.fill")
@@ -155,110 +207,49 @@ struct ContentView: View {
         }
         .buttonStyle(.borderedProminent)
         .tint(.green)
-        .disabled(store.projects.isEmpty)
+    }
+
+    private var pauseButton: some View {
+        Button {
+            Haptics.light()
+            withAnimation { store.pause() }
+        } label: {
+            Label("Pauză", systemImage: "pause.fill")
+                .font(.title3.bold())
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(.orange)
+    }
+
+    private var resumeButton: some View {
+        Button {
+            Haptics.light()
+            withAnimation { store.resume() }
+        } label: {
+            Label("Reluare", systemImage: "play.fill")
+                .font(.title3.bold())
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(.green)
     }
 
     private var stopButton: some View {
         Button {
+            Haptics.success()
             let saved = withAnimation { store.stop() }
             if let saved { editingEntry = saved }
         } label: {
             Label("Stop", systemImage: "stop.fill")
-                .font(.title2.bold())
+                .font(.title3.bold())
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
         }
         .buttonStyle(.borderedProminent)
         .tint(.red)
-    }
-
-    // MARK: - Lista de pontaje
-
-    private var entriesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Pontaje")
-                    .font(.title3.bold())
-                Spacer()
-                if !filteredEntries.isEmpty {
-                    Text(Formatters.durationShort(periodSummary.total))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                if !store.projects.isEmpty {
-                    Button {
-                        showAddEntry = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                    }
-                }
-            }
-
-            if !store.entries.isEmpty {
-                FilterBar(filter: $filter)
-            }
-
-            if !filteredEntries.isEmpty {
-                SummaryView(summary: periodSummary,
-                            normalDaily: store.normalDailyDuration)
-            }
-
-            if store.sortedEntries.isEmpty {
-                Text("Inca nu ai niciun pontaj. Alege un proiect si apasa Start.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 8)
-            } else if filteredEntries.isEmpty {
-                Text("Niciun pontaj pentru filtrul selectat.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 8)
-            } else {
-                ForEach(groupedEntries, id: \.day) { group in
-                    dayGroup(group)
-                }
-            }
-        }
-    }
-
-    /// Un grup de pontaje dintr-o zi, cu antet (data + subtotal).
-    private func dayGroup(_ group: (day: Date, entries: [TimeEntry])) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(Formatters.dayHeader.string(from: group.day))
-                    .font(.subheadline.bold())
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(Formatters.durationShort(group.entries.reduce(0) { $0 + $1.duration }))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.top, 4)
-
-            ForEach(group.entries) { entry in
-                Button {
-                    editingEntry = entry
-                } label: {
-                    EntryRow(entry: entry)
-                }
-                .buttonStyle(.plain)
-                .contextMenu {
-                    Button {
-                        editingEntry = entry
-                    } label: {
-                        Label("Editeaza", systemImage: "square.and.pencil")
-                    }
-                    Button(role: .destructive) {
-                        store.deleteEntry(entry)
-                    } label: {
-                        Label("Sterge", systemImage: "trash")
-                    }
-                }
-            }
-        }
     }
 
     // MARK: - Helpers
@@ -267,7 +258,6 @@ struct ContentView: View {
         store.sortedEntries.filter { filter.matches($0) }
     }
 
-    /// Pontajele filtrate, grupate pe zi (dupa ora de start), zilele recente primele.
     private var groupedEntries: [(day: Date, entries: [TimeEntry])] {
         let cal = Calendar.current
         let groups = Dictionary(grouping: filteredEntries) { cal.startOfDay(for: $0.start) }
@@ -276,7 +266,6 @@ struct ContentView: View {
             .sorted { $0.day > $1.day }
     }
 
-    /// Rezumatul perioadei, decupat la intervalul filtrului.
     private var periodSummary: PeriodSummary {
         store.summary(for: filteredEntries, clip: filter.dateInterval)
     }
@@ -287,8 +276,6 @@ struct ContentView: View {
 
     private var selectedProjectName: String? { selectedProject?.name }
 
-    /// Aliniaza selectia: daca exista o sesiune activa folosim proiectul ei,
-    /// altfel alegem primul proiect daca nimic nu e selectat.
     private func syncSelection() {
         if let active = store.active {
             selectedProjectId = active.projectId
@@ -299,6 +286,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
-        .environmentObject(PontajStore())
+    ContentView().environmentObject(PontajStore())
 }

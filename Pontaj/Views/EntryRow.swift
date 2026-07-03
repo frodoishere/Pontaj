@@ -17,14 +17,18 @@ struct EntryRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if entry.note.isEmpty {
-                    Label("Adauga ce ai facut", systemImage: "square.and.pencil")
+                    Label("Adaugă ce ai făcut", systemImage: "square.and.pencil")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 } else {
                     Text(entry.note)
                         .font(.subheadline)
-                        .foregroundStyle(.primary)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+                if entry.pausedDuration > 0 {
+                    Label("Pauză: \(Formatters.durationShort(entry.pausedDuration))", systemImage: "pause.circle")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
                 }
             }
 

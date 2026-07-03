@@ -1,11 +1,12 @@
 import SwiftUI
 
-/// Ecran pentru a edita un pontaj existent sau a adauga manual unul (pe trecut).
 struct EntryEditView: View {
     enum Mode {
         case edit(TimeEntry)
         case create
     }
+
+    private static let quickTags = ["Birou", "Teren", "Deplasare", "Ședință", "Montaj"]
 
     @EnvironmentObject private var store: PontajStore
     @Environment(\.dismiss) private var dismiss
@@ -53,13 +54,29 @@ struct EntryEditView: View {
                         Text("Durata")
                         Spacer()
                         Text(isValidInterval ? Formatters.duration(end.timeIntervalSince(start))
-                                             : "Stop trebuie dupa Start")
+                                             : "Stop trebuie după Start")
                             .foregroundStyle(isValidInterval ? Color.secondary : Color.red)
                     }
                     .font(.subheadline)
                 }
 
-                Section("Ce am facut") {
+                Section("Ce am făcut") {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(Self.quickTags, id: \.self) { tag in
+                                Button {
+                                    appendTag(tag)
+                                } label: {
+                                    Text(tag)
+                                        .font(.caption)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(Capsule().fill(Color(.tertiarySystemFill)))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
                     TextField("Descrie pe scurt ce ai lucrat...", text: $note, axis: .vertical)
                         .lineLimit(3...8)
                 }
@@ -70,19 +87,19 @@ struct EntryEditView: View {
                             store.deleteEntry(entry)
                             dismiss()
                         } label: {
-                            Label("Sterge pontajul", systemImage: "trash")
+                            Label("Șterge pontajul", systemImage: "trash")
                         }
                     }
                 }
             }
-            .navigationTitle(isCreate ? "Pontaj nou" : "Editeaza pontajul")
+            .navigationTitle(isCreate ? "Pontaj nou" : "Editează pontajul")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Inchide") { dismiss() }
+                    Button("Închide") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Salveaza", action: save)
+                    Button("Salvează", action: save)
                         .disabled(!canSave)
                 }
             }
@@ -95,8 +112,15 @@ struct EntryEditView: View {
     }
 
     private var isValidInterval: Bool { end > start }
-
     private var canSave: Bool { projectId != nil && isValidInterval }
+
+    private func appendTag(_ tag: String) {
+        if note.isEmpty {
+            note = tag
+        } else if !note.contains(tag) {
+            note += note.hasSuffix(".") || note.hasSuffix(",") ? " \(tag)" : ", \(tag)"
+        }
+    }
 
     private func save() {
         guard let projectId,
@@ -116,9 +140,4 @@ struct EntryEditView: View {
         }
         dismiss()
     }
-}
-
-#Preview {
-    EntryEditView(mode: .create)
-        .environmentObject(PontajStore())
 }

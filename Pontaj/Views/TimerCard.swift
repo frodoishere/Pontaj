@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Cardul cu cronometrul / ora curenta. Are propriul timer, ca sa se actualizeze
-/// doar acest card in fiecare secunda, nu tot ecranul (mai putin consum).
+/// Cardul cu cronometrul / ora curenta. Are propriul timer izolat.
 struct TimerCard: View {
     let active: PontajStore.ActiveSessionState?
 
@@ -15,15 +14,22 @@ struct TimerCard: View {
                     .font(.headline)
                     .foregroundStyle(.secondary)
 
-                Text(Formatters.duration(now.timeIntervalSince(active.start)))
+                Text(Formatters.duration(active.elapsed(at: now)))
                     .font(.system(size: 56, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .contentTransition(.numericText())
+                    .foregroundStyle(active.isPaused ? .orange : .primary)
 
-                Label("Pornit la \(Formatters.timeOnly.string(from: active.start))",
-                      systemImage: "play.circle")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                if active.isPaused {
+                    Label("În pauză", systemImage: "pause.circle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.orange)
+                } else {
+                    Label("Pornit la \(Formatters.timeOnly.string(from: active.start))",
+                          systemImage: "play.circle")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             } else {
                 Text("Niciun pontaj activ")
                     .font(.headline)
@@ -44,6 +50,12 @@ struct TimerCard: View {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(Color(.secondarySystemGroupedBackground))
         )
+        .overlay {
+            if active?.isPaused == true {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(Color.orange.opacity(0.4), lineWidth: 2)
+            }
+        }
         .onReceive(ticker) { now = $0 }
     }
 }

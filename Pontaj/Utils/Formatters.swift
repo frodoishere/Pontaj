@@ -80,4 +80,9 @@ enum Formatters {
         if h > 0 { return "\(h)h \(m)m" }
         return "\(m)m"
     }
+
+    /// Suma in lei (ex: 1.250,50 lei).
+    static func money(_ amount: Double) -> String {
+        String(format: "%.2f lei", amount)
+    }
 }

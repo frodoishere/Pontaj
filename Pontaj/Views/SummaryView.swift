@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// Card cu rezumatul pontajelor filtrate: normal vs suplimentar + total per proiect.
 struct SummaryView: View {
     let summary: PeriodSummary
     let normalDaily: TimeInterval
+    var billingTotal: Double = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -36,6 +36,18 @@ struct SummaryView: View {
             }
             .font(.subheadline)
 
+            if billingTotal > 0 {
+                HStack {
+                    Label("Facturabil", systemImage: "banknote")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(Formatters.money(billingTotal))
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.green)
+                }
+                .font(.subheadline)
+            }
+
             Text("Prag program normal: \(Formatters.hoursMinutes(normalDaily)) / zi")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
@@ -45,8 +57,7 @@ struct SummaryView: View {
                 VStack(spacing: 8) {
                     ForEach(summary.perProject) { item in
                         HStack {
-                            Text(item.name)
-                                .lineLimit(1)
+                            Text(item.name).lineLimit(1)
                             Spacer()
                             Text(Formatters.durationShort(item.total))
                                 .foregroundStyle(.secondary)
@@ -81,21 +92,4 @@ struct SummaryView: View {
                 .fill(color.opacity(0.12))
         )
     }
-}
-
-#Preview {
-    SummaryView(
-        summary: PeriodSummary(
-            total: 10 * 3600,
-            normal: 8.5 * 3600,
-            overtime: 1.5 * 3600,
-            perProject: [
-                .init(id: UUID(), name: "Proiect A", total: 6 * 3600),
-                .init(id: UUID(), name: "Proiect B", total: 4 * 3600)
-            ],
-            dayCount: 1
-        ),
-        normalDaily: 8.5 * 3600
-    )
-    .padding()
 }
