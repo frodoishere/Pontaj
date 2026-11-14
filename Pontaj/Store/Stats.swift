@@ -35,7 +35,7 @@ enum Stats {
     /// contorizat corect pe fiecare zi in parte.
     static func dailyPortions(start: Date, end: Date, calendar: Calendar) -> [(day: Date, duration: TimeInterval)] {
         guard end > start else {
-            return [(calendar.startOfDay(for: start), 0)]
+            return []
         }
         var portions: [(Date, TimeInterval)] = []
         var cursor = start
@@ -49,23 +49,16 @@ enum Stats {
         return portions
     }
 
-    /// Decupeaza un pontaj la limitele perioadei (clip). Returneaza nil daca
-    /// pontajul nu se intersecteaza deloc cu perioada.
-    private static func clip(_ entry: TimeEntry, to interval: DateInterval?) -> (start: Date, end: Date)? {
-        guard let interval else { return (entry.start, entry.end) }
-        let start = max(entry.start, interval.start)
-        let end = min(entry.end, interval.end)
-        guard end > start else { return nil }
-        return (start, end)
-    }
-
     /// Totaluri pe zi (cu split la miezul noptii, decupate la perioada).
     private static func dayTotals(for entries: [TimeEntry], calendar: Calendar, clip interval: DateInterval?) -> [Date: TimeInterval] {
         var totals: [Date: TimeInterval] = [:]
         for entry in entries {
-            guard let range = clip(entry, to: interval) else { continue }
+            guard let range = entry.clippedInterval(to: interval) else { continue }
             for portion in dailyPortions(start: range.start, end: range.end, calendar: calendar) {
-                totals[portion.day, default: 0] += portion.duration
+                let segment = DateInterval(start: max(range.start, portion.day), duration: portion.duration)
+                let worked = entry.workedDuration(in: segment)
+                guard worked > 0 else { continue }
+                totals[portion.day, default: 0] += worked
             }
         }
         return totals
@@ -83,8 +76,8 @@ enum Stats {
         // Total per proiect (decupat la perioada).
         var projectTotals: [UUID: (name: String, total: TimeInterval)] = [:]
         for entry in entries {
-            guard let range = clip(entry, to: interval) else { continue }
-            let duration = range.end.timeIntervalSince(range.start)
+            let duration = entry.workedDuration(in: interval)
+            guard duration > 0 else { continue }
             result.total += duration
             let existing = projectTotals[entry.projectId]
             projectTotals[entry.projectId] = (entry.projectName, (existing?.total ?? 0) + duration)
@@ -120,3 +113,4 @@ enum Stats {
             .sorted { $0.day > $1.day }
     }
 }
+

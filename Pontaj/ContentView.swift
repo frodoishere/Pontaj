@@ -35,7 +35,7 @@ struct ContentView: View {
                         SummaryView(
                             summary: periodSummary,
                             normalDaily: store.normalDailyDuration,
-                            billingTotal: store.billingTotal(for: filteredEntries)
+                            billingTotal: store.billingTotal(for: filteredEntries, clip: filter.dateInterval)
                         )
                     }
                     .listRowInsets(EdgeInsets())
@@ -59,7 +59,7 @@ struct ContentView: View {
                         Section {
                             ForEach(group.entries) { entry in
                                 Button { editingEntry = entry } label: {
-                                    EntryRow(entry: entry)
+                                    EntryRow(entry: entry, clip: group.interval)
                                 }
                                 .buttonStyle(.plain)
                                 .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
@@ -77,7 +77,9 @@ struct ContentView: View {
                             HStack {
                                 Text(Formatters.dayHeader.string(from: group.day))
                                 Spacer()
-                                Text(Formatters.durationShort(group.entries.reduce(0) { $0 + $1.duration }))
+                                Text(Formatters.durationShort(group.entries.reduce(0) {
+                                    $0 + $1.workedDuration(in: group.interval)
+                                }))
                             }
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -258,11 +260,24 @@ struct ContentView: View {
         store.sortedEntries.filter { filter.matches($0) }
     }
 
-    private var groupedEntries: [(day: Date, entries: [TimeEntry])] {
+    private var groupedEntries: [(day: Date, interval: DateInterval, entries: [TimeEntry])] {
         let cal = Calendar.current
-        let groups = Dictionary(grouping: filteredEntries) { cal.startOfDay(for: $0.start) }
+        let clip = filter.dateInterval
+        var groups: [Date: [TimeEntry]] = [:]
+        for entry in filteredEntries {
+            guard let range = entry.clippedInterval(to: clip) else { continue }
+            for portion in Stats.dailyPortions(start: range.start, end: range.end, calendar: cal) {
+                groups[portion.day, default: []].append(entry)
+            }
+        }
         return groups
-            .map { (day: $0.key, entries: $0.value.sorted { $0.start > $1.start }) }
+            .compactMap { day, entries -> (day: Date, interval: DateInterval, entries: [TimeEntry])? in
+                guard let dayRange = cal.dateInterval(of: .day, for: day) else { return nil }
+                let start = max(dayRange.start, clip?.start ?? dayRange.start)
+                let end = min(dayRange.end, clip?.end ?? dayRange.end)
+                guard end > start else { return nil }
+                return (day, DateInterval(start: start, end: end), entries.sorted { $0.start > $1.start })
+            }
             .sorted { $0.day > $1.day }
     }
 
@@ -288,3 +303,4 @@ struct ContentView: View {
 #Preview {
     ContentView().environmentObject(PontajStore())
 }
+

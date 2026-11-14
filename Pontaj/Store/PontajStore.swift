@@ -90,10 +90,10 @@ final class PontajStore: ObservableObject {
         entries.filter { $0.projectId == id }.reduce(0) { $0 + $1.duration }
     }
 
-    func billingTotal(for entries: [TimeEntry]) -> Double {
+    func billingTotal(for entries: [TimeEntry], clip: DateInterval? = nil) -> Double {
         entries.reduce(0) { sum, entry in
             let rate = projects.first { $0.id == entry.projectId }?.hourlyRate ?? 0
-            return sum + (entry.duration / 3600) * rate
+            return sum + (entry.workedDuration(in: clip) / 3600) * rate
         }
     }
 
@@ -236,12 +236,14 @@ final class PontajStore: ObservableObject {
         lines.append("Pontaje")
         lines.append("Proiect,Start,Stop,Durata,Ore,Ce am facut")
         for entry in entries {
+            guard let range = entry.clippedInterval(to: clip) else { continue }
+            let worked = entry.workedDuration(in: clip)
             let fields = [
                 entry.projectName,
-                Formatters.csv.string(from: entry.start),
-                Formatters.csv.string(from: entry.end),
-                Formatters.duration(entry.duration),
-                Formatters.decimalHours(entry.duration),
+                Formatters.csv.string(from: range.start),
+                Formatters.csv.string(from: range.end),
+                Formatters.duration(worked),
+                Formatters.decimalHours(worked),
                 entry.note
             ]
             lines.append(fields.map(Self.escapeCSV).joined(separator: ","))
@@ -265,7 +267,7 @@ final class PontajStore: ObservableObject {
         lines.append("")
         lines.append("Total,\(Formatters.decimalHours(summary.total)),\(Formatters.decimalHours(summary.normal)),\(Formatters.decimalHours(summary.overtime))")
 
-        let billing = billingTotal(for: entries)
+        let billing = billingTotal(for: entries, clip: clip)
         if billing > 0 {
             lines.append("")
             lines.append("Total facturabil,\(Formatters.money(billing))")
@@ -331,3 +333,4 @@ final class PontajStore: ObservableObject {
         try? data.write(to: url, options: [.atomic])
     }
 }
+

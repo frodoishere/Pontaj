@@ -51,13 +51,18 @@ struct EntryEditView: View {
                     DatePicker("Start", selection: $start)
                     DatePicker("Stop", selection: $end)
                     HStack {
-                        Text("Durata")
+                        Text("Durata lucrată")
                         Spacer()
-                        Text(isValidInterval ? Formatters.duration(end.timeIntervalSince(start))
-                                             : "Stop trebuie după Start")
+                        Text(isValidInterval ? Formatters.duration(end.timeIntervalSince(start) - recordedPause)
+                                             : intervalError)
                             .foregroundStyle(isValidInterval ? Color.secondary : Color.red)
                     }
                     .font(.subheadline)
+                    if recordedPause > 0 {
+                        Text("Pauză păstrată: \(Formatters.durationShort(recordedPause))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Section("Ce am făcut") {
@@ -111,7 +116,18 @@ struct EntryEditView: View {
         return false
     }
 
-    private var isValidInterval: Bool { end > start }
+    private var recordedPause: TimeInterval {
+        if case .edit(let entry) = mode { return max(0, entry.pausedDuration) }
+        return 0
+    }
+
+    private var isValidInterval: Bool {
+        end > start && end.timeIntervalSince(start) >= recordedPause
+    }
+
+    private var intervalError: String {
+        end <= start ? "Stop trebuie după Start" : "Intervalul este mai scurt decât pauza păstrată"
+    }
     private var canSave: Bool { projectId != nil && isValidInterval }
 
     private func appendTag(_ tag: String) {
@@ -123,7 +139,7 @@ struct EntryEditView: View {
     }
 
     private func save() {
-        guard let projectId,
+        guard canSave, let projectId,
               let project = store.projects.first(where: { $0.id == projectId }) else { return }
 
         switch mode {
@@ -141,3 +157,4 @@ struct EntryEditView: View {
         dismiss()
     }
 }
+

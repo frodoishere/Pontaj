@@ -2,6 +2,14 @@ import SwiftUI
 
 struct EntryRow: View {
     let entry: TimeEntry
+    var clip: DateInterval? = nil
+
+    private var displayedRange: DateInterval {
+        entry.clippedInterval(to: clip) ?? DateInterval(start: entry.start, duration: 0)
+    }
+
+    private var worked: TimeInterval { entry.workedDuration(in: clip) }
+    private var allocatedPause: TimeInterval { max(0, displayedRange.duration - worked) }
 
     var body: some View {
         HStack(spacing: 14) {
@@ -13,7 +21,7 @@ struct EntryRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(entry.projectName)
                     .font(.headline)
-                Text("\(Formatters.dateTime.string(from: entry.start)) - \(Formatters.timeOnly.string(from: entry.end))")
+                Text("\(Formatters.dateTime.string(from: displayedRange.start)) - \(Formatters.timeOnly.string(from: displayedRange.end))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if entry.note.isEmpty {
@@ -25,8 +33,8 @@ struct EntryRow: View {
                         .font(.subheadline)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                if entry.pausedDuration > 0 {
-                    Label("Pauză: \(Formatters.durationShort(entry.pausedDuration))", systemImage: "pause.circle")
+                if allocatedPause > 0 {
+                    Label("Pauză alocată: \(Formatters.durationShort(allocatedPause))", systemImage: "pause.circle")
                         .font(.caption2)
                         .foregroundStyle(.orange)
                 }
@@ -34,7 +42,7 @@ struct EntryRow: View {
 
             Spacer()
 
-            Text(Formatters.duration(entry.duration))
+            Text(Formatters.duration(worked))
                 .font(.subheadline.monospacedDigit())
                 .fontWeight(.semibold)
         }
@@ -57,3 +65,4 @@ struct EntryRow: View {
     )
     .padding()
 }
+

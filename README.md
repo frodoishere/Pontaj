@@ -1,9 +1,19 @@
 # Pontaj - aplicatie iOS de pontaj pe proiect
 
-Aplicatie nativa SwiftUI pentru iPhone. Alegi un proiect, apesi **Start**, iar
+Proiect personal de pontaj realizat in SwiftUI, in dezvoltare. Repository-ul
+contine codul aplicatiei pentru iPhone, proiectul Xcode si teste pentru calculele de timp.
+Alegi un proiect, apesi **Start**, iar
 cand termini apesi **Stop**. Aplicatia ia automat data si ora de la telefon si
-salveaza fiecare pontaj. Totul este stocat **local pe telefon** (fisiere JSON),
-fara server si fara cont.
+salveaza fiecare pontaj. Aplicatia stocheaza datele **local pe telefon** (fisiere JSON)
+si nu foloseste un server propriu sau un cont. Exporturile CSV si backupurile JSON
+pot fi salvate sau partajate de utilizator.
+
+## Dezvoltare asistata de AI
+
+Proiect dezvoltat cu asistenta AI. Am folosit preponderent **ChatGPT**, alaturi de
+**Cursor** si **Claude**, pentru a transforma cerintele in functionalitati,
+a integra modificarile si a investiga problemele. Codul si testele sunt disponibile
+pentru evaluare; aplicatia nu este prezentata ca produs publicat in App Store.
 
 ## Functii
 
@@ -11,7 +21,7 @@ fara server si fara cont.
 - **Tarif pe oră** per proiect (opțional) → total **facturabil** în rezumat și CSV.
 - **Editare proiect**: apasă pe un proiect din listă pentru nume și tarif.
 - **Tag-uri rapide** la descriere: Birou, Teren, Deplasare, etc.
-- **Swipe stânga → Șterge** pe pontaje (sau ține apăsat pentru meniu).
+- **Swipe stânga → Șterge** pe pontaje.
 - **Backup / Restore** JSON din ecranul Proiecte.
 - **Notificare** dacă pontajul rămâne pornit peste 12 ore.
 - **Feedback haptic** la Start / Stop / Pauză.
@@ -39,6 +49,38 @@ fara server si fara cont.
 - Istoric de pontaje cu durata fiecaruia si total per proiect.
 - Sesiunea activa este salvata: daca inchizi aplicatia in timpul unui pontaj,
   cronometrul continua de unde a ramas la redeschidere.
+
+## Cum se calculeaza timpul
+
+Durata lucrata este intervalul Start–Stop minus pauzele. Aceeasi regula este
+folosita in lista, rezumate, ore suplimentare, exportul CSV si totalul facturabil.
+Filtrarea include numai partea sesiunii care se intersecteaza cu perioada selectata.
+Sesiunile care trec de miezul noptii sunt impartite pe zile calendaristice; editarea
+unei astfel de portiuni deschide inregistrarea originala completa.
+
+Datele salvate contin **durata totala a pauzelor**, fara momentele exacte ale
+fiecarei pauze. De aceea, la impartirea unei sesiuni intre zile sau la filtrarea
+unei parti din ea, timpul net si pauzele sunt **distribuite proportional** cu
+durata intersectiei. De exemplu, o sesiune de doua ore cu o pauza totala de
+30 de minute aloca 45 de minute lucrate fiecarui interval de o ora. Aceasta
+regula pastreaza totalurile consecvente; nu reconstituie momentul real al pauzei.
+
+La editare, pauza inregistrata se pastreaza si nu poate depasi noul interval.
+Inregistrarile vechi fara campul de pauza se citesc in continuare, cu pauza zero.
+
+## Teste
+
+Calculele bazate pe Foundation se pot verifica fara un simulator iOS:
+
+```sh
+swift test
+```
+
+Suita acopera pauzele, repartizarea pe proiecte si zile, orele suplimentare,
+filtrarea partiala, trecerea la ora de vara, intervalele invalide si compatibilitatea
+JSON. Pachetul foloseste aceleasi surse `TimeEntry.swift` si `Stats.swift` ca aplicatia.
+Aceste teste nu compileaza interfata SwiftUI si nu inlocuiesc verificarea aplicatiei
+in Xcode, in simulator sau pe un iPhone.
 
 ## Structura proiectului
 
@@ -72,8 +114,7 @@ Pontaj/
 
 ## Cum o compilezi si o rulezi (necesita un Mac)
 
-> O aplicatie iOS nativa se poate construi doar pe un Mac cu Xcode. Codul de aici
-> este complet; trebuie doar deschis pe un Mac.
+Pentru compilarea si verificarea aplicatiei iOS este necesar un Mac cu Xcode.
 
 1. Clonează repo-ul pe Mac: `git clone https://github.com/frodoishere/Pontaj.git`
 2. Instalează **Xcode 16** sau mai nou (din App Store).
@@ -96,7 +137,8 @@ Pentru actualizări ulterioare: `git pull` în folderul proiectului.
 ## Note
 
 - Cerinta minima: iOS 16.0.
-- Datele se pastreaza intre porniri si raman doar pe telefon. Daca dezinstalezi
-  aplicatia, se sterg.
+- Datele se pastreaza local intre porniri. Exporturile si backupurile partajate
+  sunt copii separate. Dezinstalarea aplicatiei sterge datele ei locale.
 - Cu un Apple ID gratuit, aplicatia instalata pe telefon expira dupa ~7 zile si
   trebuie reinstalata din Xcode. Cu un cont platit de developer expira dupa 1 an.
+

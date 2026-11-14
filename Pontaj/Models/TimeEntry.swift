@@ -24,7 +24,24 @@ struct TimeEntry: Identifiable, Codable, Hashable {
     }
 
     /// Durata efectiva lucrată (fara pauze).
-    var duration: TimeInterval { max(0, end.timeIntervalSince(start) - pausedDuration) }
+    var duration: TimeInterval {
+        max(0, end.timeIntervalSince(start) - max(0, pausedDuration))
+    }
+
+    /// Intersectia cu perioada selectata; intervalele goale sau inversate sunt ignorate.
+    func clippedInterval(to interval: DateInterval? = nil) -> DateInterval? {
+        let clippedStart = max(start, interval?.start ?? start)
+        let clippedEnd = min(end, interval?.end ?? end)
+        guard clippedEnd > clippedStart else { return nil }
+        return DateInterval(start: clippedStart, end: clippedEnd)
+    }
+
+    /// Inregistrarile pastreaza totalul pauzelor, nu momentele lor exacte.
+    /// Alocam proportional timpul net cand perioada sau ziua taie sesiunea.
+    func workedDuration(in interval: DateInterval? = nil) -> TimeInterval {
+        guard let range = clippedInterval(to: interval) else { return 0 }
+        return duration * (range.duration / end.timeIntervalSince(start))
+    }
 }
 
 extension TimeEntry {
@@ -39,3 +56,4 @@ extension TimeEntry {
         pausedDuration = try c.decodeIfPresent(TimeInterval.self, forKey: .pausedDuration) ?? 0
     }
 }
+
